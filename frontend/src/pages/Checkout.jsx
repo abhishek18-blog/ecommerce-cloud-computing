@@ -42,7 +42,7 @@ const Checkout = () => {
         }
       };
 
-      const res = await axios.post('http://localhost:5000/api/orders/checkout', orderData);
+      const res = await axios.post('http://localhost:5002/api/orders/checkout', orderData);
       
       setPaymentId(res.data.paymentId);
       setSuccess(true);

@@ -20,7 +20,7 @@ const Products = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        let url = 'http://localhost:5000/api/products?';
+        let url = 'http://localhost:5001/api/products?';
         if (currentCategory !== 'All') url += `category=${currentCategory}&`;
         if (currentSearch) url += `search=${currentSearch}&`;
         

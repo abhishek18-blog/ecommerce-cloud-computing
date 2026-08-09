@@ -22,6 +22,18 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Add a new product
+router.post('/', async (req, res) => {
+  try {
+    const product = new Product(req.body);
+    await product.save();
+    res.status(201).json(product);
+  } catch (err) {
+    res.status(500).json({ message: 'Server Error', error: err.message });
+  }
+});
+
+
 // Get single product
 router.get('/:id', async (req, res) => {
   try {
