@@ -38,5 +38,19 @@ services:
     depends_on:
       - mongodb
 
+  # 4. Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+    container_name: ecommerce-frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_PRODUCT_API_URL=http://localhost:5001/api/products
+      - VITE_ORDER_API_URL=http://localhost:5002/api/orders
+    depends_on:
+      - product-service
+      - order-service
+
 volumes:
   mongo_data:
