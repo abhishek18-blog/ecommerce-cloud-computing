@@ -14,7 +14,8 @@ const ProductDetails = () => {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await axios.get(`http://localhost:5001/api/products/${id}`);
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        const res = await axios.get(`${apiBase}/products/${id}`);
         setProduct(res.data);
       } catch (error) {
         console.error("Error fetching product", error);

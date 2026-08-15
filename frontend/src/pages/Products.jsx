@@ -20,7 +20,8 @@ const Products = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        let url = 'http://localhost:5001/api/products?';
+        const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+        let url = `${apiBase}/products?`;
         if (currentCategory !== 'All') url += `category=${currentCategory}&`;
         if (currentSearch) url += `search=${currentSearch}&`;
         

@@ -1,57 +1,87 @@
 import express from 'express';
-import Order from '../models/Order.js';
-import Product from '../models/Product.js';
+import { Order, OrderItem, Product } from '../models/index.js';
 
 const router = express.Router();
 
-// Mock Payment Gateway Checkout
-router.post('/checkout', async (req, res) => {
+// Helper checkout processor
+const processCheckout = async (req, res) => {
   try {
     const { items, shippingAddress } = req.body;
     
-    // Calculate total
-    let totalAmount = 0;
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (!product) return res.status(404).json({ message: `Product not found: ${item.productId}` });
-      if (product.stock < item.quantity) return res.status(400).json({ message: `Not enough stock for ${product.name}` });
-      totalAmount += product.price * item.quantity;
-      
-      // Decrease stock
-      product.stock -= item.quantity;
-      await product.save();
+    if (!items || items.length === 0) {
+      return res.status(400).json({ message: 'Cart items required' });
     }
 
-    // Process Mock Payment
+    let totalAmount = 0;
+    const verifiedItems = [];
+
+    for (const item of items) {
+      const product = await Product.findByPk(item.productId);
+      if (!product) return res.status(404).json({ message: `Product not found: ${item.productId}` });
+      if (product.stock < item.quantity) return res.status(400).json({ message: `Not enough stock for ${product.name}` });
+
+      const price = item.price || product.price;
+      totalAmount += price * item.quantity;
+      verifiedItems.push({ product, quantity: item.quantity, price });
+    }
+
+    // Deduct stock
+    for (const item of verifiedItems) {
+      item.product.stock -= item.quantity;
+      await item.product.save();
+    }
+
     const paymentId = 'PAY-' + Math.random().toString(36).substring(2, 10).toUpperCase();
 
-    // Create Order
-    const orderItems = items.map(item => ({
-      product: item.productId,
-      quantity: item.quantity,
-      price: item.price
-    }));
-
-    const order = new Order({
-      items: orderItems,
+    const order = await Order.create({
       totalAmount,
-      shippingAddress,
-      paymentId,
-      status: 'Paid'
+      status: 'Paid',
+      fullName: shippingAddress?.fullName || '',
+      address: shippingAddress?.address || '',
+      city: shippingAddress?.city || '',
+      zipCode: shippingAddress?.zipCode || '',
+      paymentId
     });
 
-    await order.save();
+    for (const item of verifiedItems) {
+      await OrderItem.create({
+        orderId: order.id,
+        productId: item.product.id,
+        quantity: item.quantity,
+        price: item.price
+      });
+    }
 
-    res.status(201).json({ message: 'Order placed successfully!', orderId: order._id, paymentId });
+    const createdOrder = await Order.findByPk(order.id, {
+      include: [{
+        model: OrderItem,
+        as: 'items',
+        include: [{ model: Product, as: 'product' }]
+      }]
+    });
+
+    res.status(201).json({ message: 'Order placed successfully!', orderId: order.id, paymentId, order: createdOrder });
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
-});
+};
+
+// Mock Payment Gateway Checkout
+router.post('/checkout', processCheckout);
+
+// Standard POST / api/orders
+router.post('/', processCheckout);
 
 // Get all orders
 router.get('/', async (req, res) => {
   try {
-    const orders = await Order.find().populate('items.product');
+    const orders = await Order.findAll({
+      include: [{
+        model: OrderItem,
+        as: 'items',
+        include: [{ model: Product, as: 'product' }]
+      }]
+    });
     res.json(orders);
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -61,7 +91,13 @@ router.get('/', async (req, res) => {
 // Get single order
 router.get('/:id', async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('items.product');
+    const order = await Order.findByPk(req.params.id, {
+      include: [{
+        model: OrderItem,
+        as: 'items',
+        include: [{ model: Product, as: 'product' }]
+      }]
+    });
     if (!order) return res.status(404).json({ message: 'Order not found' });
     res.json(order);
   } catch (err) {
@@ -73,57 +109,11 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { status } = req.body;
-    const order = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    const order = await Order.findByPk(req.params.id);
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    res.json(order);
-  } catch (err) {
-    res.status(500).json({ message: 'Server Error', error: err.message });
-  }
-});
-
-// Create order (POST) - equivalent to checkout but standard REST
-router.post('/', async (req, res) => {
-  try {
-    const { items, shippingAddress } = req.body;
-    
-    // Calculate total
-    let totalAmount = 0;
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (!product) return res.status(404).json({ message: `Product not found: ${item.productId}` });
-      if (product.stock < item.quantity) return res.status(400).json({ message: `Not enough stock for ${product.name}` });
-      totalAmount += product.price * item.quantity;
-      
-      // Decrease stock
-      product.stock -= item.quantity;
-      await product.save();
-    }
-
-    // Process Mock Payment
-    const paymentId = 'PAY-' + Math.random().toString(36).substring(2, 10).toUpperCase();
-
-    // Create Order
-    const orderItems = items.map(item => ({
-      product: item.productId,
-      quantity: item.quantity,
-      price: item.price
-    }));
-
-    const order = new Order({
-      items: orderItems,
-      totalAmount,
-      shippingAddress,
-      paymentId,
-      status: 'Paid'
-    });
-
+    order.status = status;
     await order.save();
-
-    res.status(201).json({ message: 'Order created successfully!', orderId: order._id, paymentId, order });
+    res.json(order);
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }

@@ -1,5 +1,6 @@
 import express from 'express';
-import Product from '../models/Product.js';
+import { Op } from 'sequelize';
+import { Product } from '../models/index.js';
 
 const router = express.Router();
 
@@ -7,15 +8,15 @@ const router = express.Router();
 router.get('/', async (req, res) => {
   try {
     const { category, search } = req.query;
-    let query = {};
-    if (category) query.category = category;
+    let where = {};
+    if (category && category !== 'All') where.category = category;
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+      where[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { description: { [Op.like]: `%${search}%` } }
       ];
     }
-    const products = await Product.find(query);
+    const products = await Product.findAll({ where });
     res.json(products);
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
@@ -25,19 +26,17 @@ router.get('/', async (req, res) => {
 // Add a new product
 router.post('/', async (req, res) => {
   try {
-    const product = new Product(req.body);
-    await product.save();
+    const product = await Product.create(req.body);
     res.status(201).json(product);
   } catch (err) {
     res.status(500).json({ message: 'Server Error', error: err.message });
   }
 });
 
-
 // Get single product
 router.get('/:id', async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id);
+    const product = await Product.findByPk(req.params.id);
     if (!product) return res.status(404).json({ message: 'Product not found' });
     res.json(product);
   } catch (err) {

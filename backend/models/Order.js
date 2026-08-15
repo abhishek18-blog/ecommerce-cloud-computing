@@ -1,20 +1,43 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import sequelize from '../config/db.js';
 
-const orderSchema = new mongoose.Schema({
-  items: [{
-    product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
-    quantity: { type: Number, required: true },
-    price: { type: Number, required: true }
-  }],
-  totalAmount: { type: Number, required: true },
-  status: { type: String, default: 'Pending' }, // Pending, Paid, Shipped
-  shippingAddress: {
-    fullName: String,
-    address: String,
-    city: String,
-    zipCode: String
+const Order = sequelize.define('Order', {
+  id: {
+    type: DataTypes.INTEGER,
+    autoIncrement: true,
+    primaryKey: true
   },
-  paymentId: { type: String } // Mock payment ID
-}, { timestamps: true });
+  totalAmount: {
+    type: DataTypes.FLOAT,
+    allowNull: false
+  },
+  status: {
+    type: DataTypes.STRING,
+    defaultValue: 'Paid'
+  },
+  fullName: {
+    type: DataTypes.STRING
+  },
+  address: {
+    type: DataTypes.STRING
+  },
+  city: {
+    type: DataTypes.STRING
+  },
+  zipCode: {
+    type: DataTypes.STRING
+  },
+  paymentId: {
+    type: DataTypes.STRING
+  },
+  _id: {
+    type: DataTypes.VIRTUAL,
+    get() {
+      return this.getDataValue('id') || this.id;
+    }
+  }
+}, {
+  timestamps: true
+});
 
-export default mongoose.model('Order', orderSchema);
+export default Order;

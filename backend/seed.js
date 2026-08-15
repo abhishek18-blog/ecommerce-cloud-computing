@@ -1,10 +1,7 @@
-import mongoose from 'mongoose';
+import { sequelize, Product } from './models/index.js';
 import dotenv from 'dotenv';
-import Product from './models/Product.js';
 
 dotenv.config();
-
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/ecommerce';
 
 const sampleProducts = [
   {
@@ -89,16 +86,19 @@ const sampleProducts = [
   }
 ];
 
-mongoose.connect(MONGO_URI)
-  .then(async () => {
-    console.log('Connected to MongoDB for seeding');
-    await Product.deleteMany({});
-    console.log('Cleared existing products');
-    await Product.insertMany(sampleProducts);
-    console.log('Inserted sample products');
-    mongoose.disconnect();
-  })
-  .catch((err) => {
-    console.error('Failed to seed database', err);
+async function seedDatabase() {
+  try {
+    await sequelize.sync({ force: true });
+    console.log('Connected to MySQL database and recreated tables.');
+    
+    await Product.bulkCreate(sampleProducts);
+    console.log('Inserted sample products successfully.');
+    
+    process.exit(0);
+  } catch (err) {
+    console.error('Failed to seed MySQL database:', err);
     process.exit(1);
-  });
+  }
+}
+
+seedDatabase();

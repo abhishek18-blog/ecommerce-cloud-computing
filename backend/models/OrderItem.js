@@ -1,36 +1,27 @@
 import { DataTypes } from 'sequelize';
 import sequelize from '../config/db.js';
 
-const Product = sequelize.define('Product', {
+const OrderItem = sequelize.define('OrderItem', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true
   },
-  name: {
-    type: DataTypes.STRING,
+  orderId: {
+    type: DataTypes.INTEGER,
     allowNull: false
   },
-  description: {
-    type: DataTypes.TEXT,
+  productId: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  quantity: {
+    type: DataTypes.INTEGER,
     allowNull: false
   },
   price: {
     type: DataTypes.FLOAT,
     allowNull: false
-  },
-  category: {
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  imageUrl: {
-    type: DataTypes.TEXT,
-    allowNull: false
-  },
-  stock: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    defaultValue: 10
   },
   _id: {
     type: DataTypes.VIRTUAL,
@@ -42,4 +33,4 @@ const Product = sequelize.define('Product', {
   timestamps: true
 });
 
-export default Product;
+export default OrderItem;
