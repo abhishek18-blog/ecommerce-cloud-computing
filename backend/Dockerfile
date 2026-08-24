@@ -12,3 +12,9 @@ RUN npm install
 
 # Copy all the rest of the backend files into the container
 COPY . .
+
+# Expose the monolithic backend port
+EXPOSE 5000
+
+# Start the monolithic Express server
+CMD ["node", "server.js"]
